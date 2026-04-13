@@ -1,0 +1,293 @@
+{
+  "format": 1,
+  "restore": {
+    "F:\\Restaurante\\Backend\\Restaurante.API\\Restaurante.API.csproj": {}
+  },
+  "projects": {
+    "F:\\Restaurante\\Backend\\Restaurante.API\\Restaurante.API.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\Restaurante\\Backend\\Restaurante.API\\Restaurante.API.csproj",
+        "projectName": "Restaurante.API",
+        "projectPath": "F:\\Restaurante\\Backend\\Restaurante.API\\Restaurante.API.csproj",
+        "packagesPath": "C:\\Users\\fedea\\.nuget\\packages\\",
+        "outputPath": "F:\\Restaurante\\Backend\\Restaurante.API\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\fedea\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj": {
+                "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj"
+              },
+              "F:\\Restaurante\\Backend\\Restaurante.Infrastructure\\Restaurante.Infrastructure.csproj": {
+                "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Infrastructure\\Restaurante.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.25, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.4, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj",
+        "projectName": "Restaurante.Application",
+        "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj",
+        "packagesPath": "C:\\Users\\fedea\\.nuget\\packages\\",
+        "outputPath": "F:\\Restaurante\\Backend\\Restaurante.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\fedea\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj": {
+                "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj",
+        "projectName": "Restaurante.Domain",
+        "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj",
+        "packagesPath": "C:\\Users\\fedea\\.nuget\\packages\\",
+        "outputPath": "F:\\Restaurante\\Backend\\Restaurante.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\fedea\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "F:\\Restaurante\\Backend\\Restaurante.Infrastructure\\Restaurante.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\Restaurante\\Backend\\Restaurante.Infrastructure\\Restaurante.Infrastructure.csproj",
+        "projectName": "Restaurante.Infrastructure",
+        "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Infrastructure\\Restaurante.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\fedea\\.nuget\\packages\\",
+        "outputPath": "F:\\Restaurante\\Backend\\Restaurante.Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\fedea\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj": {
+                "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Application\\Restaurante.Application.csproj"
+              },
+              "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj": {
+                "projectPath": "F:\\Restaurante\\Backend\\Restaurante.Domain\\Restaurante.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.4, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[8.0.4, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,170 @@
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bs-secondary-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#app {
+    flex: 1;
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1920&q=80') no-repeat center center;
+    background-size: cover;
+    color: white;
+    padding: 80px 20px;
+    border-radius: 15px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.hero h1 {
+    font-weight: 800;
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+/* Cards */
+.dish-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    background-color: var(--bs-card-bg);
+    overflow: hidden;
+}
+
+.dish-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.1);
+}
+
+.dish-image {
+    height: 220px;
+    object-fit: cover;
+}
+
+.category-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Auth Card */
+.auth-card {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    background-color: var(--bs-card-bg);
+}
+
+/* Progress Tracker */
+.order-progress {
+    display: flex;
+    justify-content: space-between;
+    margin: 30px 0;
+    position: relative;
+    padding: 0 20px;
+}
+.order-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    right: 40px;
+    height: 4px;
+    background: var(--bs-secondary-bg);
+    z-index: 1;
+}
+.progress-step {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    width: 60px;
+}
+.progress-step.active {
+    color: #ea4c89;
+}
+.progress-step.completed {
+    color: #198754;
+}
+.progress-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bs-secondary-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    color: var(--bs-body-bg);
+    font-size: 1.2rem;
+    box-shadow: 0 0 0 4px var(--bs-body-bg);
+}
+.progress-step.active .progress-icon {
+    background: #ea4c89;
+    box-shadow: 0 0 0 4px #fce4ec;
+}
+.progress-step.completed .progress-icon {
+    background: #198754;
+}
+
+/* Navbar */
+.navbar {
+    padding: 15px 0;
+}
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: #ea4c89 !important;
+    letter-spacing: -0.5px;
+}
+
+/* Loader */
+.loading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    color: var(--bs-secondary-color);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bs-secondary-bg); 
+}
+::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary-color); 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-primary); 
+}
+
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+    .progress-step.active .progress-icon {
+        box-shadow: 0 0 0 4px #4a182a;
+    }
+}

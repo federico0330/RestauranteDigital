@@ -1,0 +1,421 @@
+openapi: 3.0.1
+info:
+  title: Restaurant API
+  description: API para la gestión de platos en un restaurante
+  version: '1.0'
+  contact:
+    name: Restaurant API Support
+    email: lolivera@unaj.edu.ar
+
+paths:
+  /api/v1/Dish:
+    post:
+      tags:
+        - Dish
+      summary: Crear nuevo plato
+      description: |
+        Crea un nuevo plato en el menú del restaurante.
+        
+        **Validaciones:**
+        - El nombre del plato debe ser único
+        - El precio debe ser mayor a 0
+        - La categoría debe existir en el sistema
+        
+        **Casos de uso:**
+        - Agregar nuevos platos al menú
+        - Platos estacionales o especiales del chef
+      requestBody:
+        description: Datos del plato a crear
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DishRequest'
+            example:
+              name: "Pizza Margherita"
+              description: "Pizza clásica con salsa de tomate, mozzarella fresca, albahaca y aceite de oliva extra virgen"
+              price: 850.50
+              category: 1
+              image: "https://restaurant.com/images/pizza-margherita.jpg"
+      responses:
+        '201':
+          description: Plato creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DishResponse'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                name: "Pizza Margherita"
+                description: "Pizza clásica con salsa de tomate, mozzarella fresca, albahaca y aceite de oliva extra virgen"
+                price: 850.50
+                category:
+                  id: 1
+                  name: "Pizzas"
+                image: "https://restaurant.com/images/pizza-margherita.jpg"
+                isActive: true
+                createdAt: "2024-03-15T10:30:00Z"
+                updatedAt: "2024-03-15T10:30:00Z"
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalid_price:
+                  summary: Precio inválido
+                  value:
+                    message: "El precio debe ser mayor a cero"
+                empty_name:
+                  summary: Nombre vacío
+                  value:
+                    message: "El nombre del plato es obligatorio"
+        '409':
+          description: Ya existe un plato con el mismo nombre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Ya existe un plato con ese nombre"
+
+    get:
+      tags:
+        - Dish
+      summary: Buscar platos
+      description: |
+        Obtiene una lista de platos del menú con opciones de filtrado y ordenamiento.
+        
+        **Filtros disponibles:**
+        - Por nombre (búsqueda parcial)
+        - Por categoría
+        - Solo platos activos/todos
+        
+        **Ordenamiento:**
+        - Por precio ascendente o descendente
+        - Sin ordenamiento específico
+        
+        **Casos de uso:**
+        - Mostrar menú completo a los clientes
+        - Buscar platos específicos
+        - Filtrar por categorías (entrantes, principales, postres)
+        - Administración del menú (incluyendo platos inactivos)
+      parameters:
+        - name: name
+          in: query
+          description: Buscar platos por nombre (búsqueda parcial)
+          schema:
+            type: string
+          example: "pizza"
+        - name: category
+          in: query
+          description: Filtrar por categoría de plato
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: sortByPrice
+          in: query
+          description: |
+            Ordenar por precio:
+            - `asc`: ascendente (menor a mayor)
+            - `desc`: descendente (mayor a menor)
+            - vacío: sin ordenamiento específico
+          schema:
+            type: string
+            enum: [asc, desc]
+          example: "asc"
+        - name: onlyActive
+          in: query
+          description: |
+            Filtrar por estado:
+            - `true`: devolver solo platos disponibles
+            - `false`: devolver todos los platos (incluyendo inactivos)
+          schema:
+            type: boolean
+            default: true
+          example: true
+      responses:
+        '200':
+          description: Lista de platos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DishResponse'
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  name: "Pizza Margherita"
+                  description: "Pizza clásica con salsa de tomate, mozzarella fresca, albahaca y aceite de oliva extra virgen"
+                  price: 850.50
+                  category:
+                    id: 1
+                    name: "Pizzas"
+                  image: "https://restaurant.com/images/pizza-margherita.jpg"
+                  isActive: true
+                  createdAt: "2024-03-15T10:30:00Z"
+                  updatedAt: "2024-03-15T10:30:00Z"
+                - id: "987fcdeb-51a2-43d7-8f9e-123456789abc"
+                  name: "Lasagna Bolognesa"
+                  description: "Lasagna tradicional con salsa bolognesa, bechamel y queso parmesano"
+                  price: 950.00
+                  category:
+                    id: 2
+                    name: "Pastas"
+                  image: "https://restaurant.com/images/lasagna-bolognesa.jpg"
+                  isActive: true
+                  createdAt: "2024-03-15T09:15:00Z"
+                  updatedAt: "2024-03-15T09:15:00Z"
+        '400':
+          description: Parámetros de búsqueda inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Parámetros de ordenamiento inválidos"
+
+  /api/v1/Dish/{id}:
+    put:
+      tags:
+        - Dish
+      summary: Actualizar plato existente
+      description: |
+        Actualiza todos los campos de un plato existente en el menú.
+        
+        **Validaciones:**
+        - El plato debe existir en el sistema
+        - Si se cambia el nombre, debe ser único
+        - El precio debe ser mayor a 0
+        - La categoría debe existir
+        
+        **Casos de uso:**
+        - Actualizar precios de platos
+        - Modificar descripciones o ingredientes
+        - Cambiar categorías de platos
+        - Activar/desactivar platos del menú
+        - Actualizar imágenes de platos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único del plato a actualizar
+          schema:
+            type: string
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      requestBody:
+        description: Datos actualizados del plato
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DishUpdateRequest'
+            example:
+              name: "Pizza Margherita Premium"
+              description: "Pizza artesanal con mozzarella de búfala, tomates San Marzano, albahaca orgánica y aceite de oliva extra virgen DOP"
+              price: 1200.00
+              category: 1
+              image: "https://restaurant.com/images/pizza-margherita-premium.jpg"
+              isActive: true
+      responses:
+        '200':
+          description: Plato actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DishResponse'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                name: "Pizza Margherita Premium"
+                description: "Pizza artesanal con mozzarella de búfala, tomates San Marzano, albahaca orgánica y aceite de oliva extra virgen DOP"
+                price: 1200.00
+                category:
+                  id: 1
+                  name: "Pizzas"
+                image: "https://restaurant.com/images/pizza-margherita-premium.jpg"
+                isActive: true
+                createdAt: "2024-03-15T10:30:00Z"
+                updatedAt: "2024-03-15T14:45:00Z"
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "El precio debe ser mayor a cero"
+        '404':
+          description: Plato no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Plato no encontrado"
+        '409':
+          description: Conflicto - nombre duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                message: "Ya existe un plato con ese nombre"
+
+components:
+  schemas:
+    ApiError:
+      type: object
+      description: Estructura estándar para errores de la API
+      properties:
+        message:
+          type: string
+          description: Mensaje de error legible para el usuario
+          nullable: true
+          example: "Ya existe un plato con ese nombre"
+      additionalProperties: false
+
+    DishRequest:
+      type: object
+      description: Datos requeridos para crear un nuevo plato
+      required:
+        - name
+        - price
+        - category
+      properties:
+        name:
+          type: string
+          description: Nombre del plato (debe ser único)
+          maxLength: 100
+          example: "Pizza Margherita"
+        description:
+          type: string
+          description: Descripción detallada del plato e ingredientes
+          maxLength: 500
+          nullable: true
+          example: "Pizza clásica con salsa de tomate, mozzarella fresca, albahaca y aceite de oliva extra virgen"
+        price:
+          type: number
+          format: double
+          description: Precio del plato en la moneda local
+          minimum: 0.01
+          example: 850.50
+        category:
+          type: integer
+          format: int32
+          description: ID de la categoría del plato (1=Pizzas, 2=Pastas, 3=Ensaladas, 4=Postres)
+          example: 1
+        image:
+          type: string
+          description: URL de la imagen del plato
+          format: uri
+          nullable: true
+          example: "https://restaurant.com/images/pizza-margherita.jpg"
+      additionalProperties: false
+
+    DishUpdateRequest:
+      type: object
+      description: Datos para actualizar un plato existente
+      required:
+        - name
+        - price
+        - category
+        - isActive
+      properties:
+        name:
+          type: string
+          description: Nombre del plato (debe ser único)
+          maxLength: 100
+          example: "Pizza Margherita Premium"
+        description:
+          type: string
+          description: Descripción detallada del plato e ingredientes
+          maxLength: 500
+          nullable: true
+          example: "Pizza artesanal con mozzarella de búfala, tomates San Marzano y albahaca orgánica"
+        price:
+          type: number
+          format: double
+          description: Precio del plato en la moneda local
+          minimum: 0.01
+          example: 1200.00
+        category:
+          type: integer
+          format: int32
+          description: ID de la categoría del plato
+          example: 1
+        image:
+          type: string
+          description: URL de la imagen del plato
+          format: uri
+          nullable: true
+          example: "https://restaurant.com/images/pizza-margherita-premium.jpg"
+        isActive:
+          type: boolean
+          description: Indica si el plato está disponible en el menú
+          example: true
+      additionalProperties: false
+
+    DishResponse:
+      type: object
+      description: Información completa de un plato
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del plato
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: Nombre del plato
+          example: "Pizza Margherita"
+        description:
+          type: string
+          description: Descripción detallada del plato
+          nullable: true
+          example: "Pizza clásica con salsa de tomate, mozzarella fresca, albahaca y aceite de oliva extra virgen"
+        price:
+          type: number
+          format: double
+          description: Precio del plato
+          example: 850.50
+        category:
+          $ref: '#/components/schemas/GenericResponse'
+        image:
+          type: string
+          description: URL de la imagen del plato
+          nullable: true
+          example: "https://restaurant.com/images/pizza-margherita.jpg"
+        isActive:
+          type: boolean
+          description: Indica si el plato está disponible
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación del plato
+          example: "2024-03-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de última actualización
+          example: "2024-03-15T10:30:00Z"
+      additionalProperties: false
+
+    GenericResponse:
+      type: object
+      description: Respuesta genérica para entidades relacionadas
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: ID de la entidad
+          example: 1
+        name:
+          type: string
+          description: Nombre de la entidad
+          nullable: true
+          example: "Pizzas"
+      additionalProperties: false
