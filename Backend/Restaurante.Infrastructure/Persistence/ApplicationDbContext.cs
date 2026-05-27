@@ -277,7 +277,7 @@ public class ApplicationDbContext : DbContext
                 Id = 1,
                 Name = "Administrador",
                 Email = "admin@restaurante.com",
-                PasswordHash = "$2a$11$Dlj/.AbWqsRq8KQS6LIcmO.IkmU.q4tu5OPxNw8sjBu24/EFCxOgi",
+                PasswordHash = "$2a$11$ajnIpu52Cors3Y5q/d2pGuNlBwUBslOhhnC2.LXM6aPkJgk1qWZr2",
                 Role = UserRoles.Admin,
                 CreateDate = seedDate
             }
