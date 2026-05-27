@@ -1,8 +1,38 @@
 import { api, auth } from './services/api.js';
 
+// Generic food placeholder (SVG) — used when a dish has no image URL
+const FOOD_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ccircle cx='200' cy='130' r='52' fill='none' stroke='%23d1d5db' stroke-width='5'/%3E%3Ccircle cx='200' cy='130' r='35' fill='none' stroke='%23e5e7eb' stroke-width='3'/%3E%3Cline x1='200' y1='78' x2='200' y2='58' stroke='%23d1d5db' stroke-width='5' stroke-linecap='round'/%3E%3Ctext x='200' y='210' text-anchor='middle' font-family='Arial%2Csans-serif' font-size='13' fill='%239ca3af'%3ESin imagen%3C%2Ftext%3E%3C%2Fsvg%3E";
+
+function setFallbackImage(img) {
+    img.onerror = null;
+    img.src = FOOD_PLACEHOLDER;
+}
+window.setFallbackImage = setFallbackImage;
+
+// Toast notification system — replaces native alert() throughout the app
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const bgClass = type === 'error' ? 'bg-danger' : type === 'warning' ? 'bg-warning text-dark' : 'bg-success';
+    const icon = type === 'error' ? 'fa-circle-xmark' : type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-check';
+    const el = document.createElement('div');
+    el.className = `toast align-items-center text-white border-0 ${bgClass} shadow`;
+    el.setAttribute('role', 'alert');
+    el.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body fw-semibold">
+                <i class="fa-solid ${icon} me-2"></i>${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>`;
+    container.appendChild(el);
+    const toast = new bootstrap.Toast(el, { delay: 3500 });
+    toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
 // App State
 const state = {
-    user: null, // { role: 'user' | 'admin', username: string }
+    user: null,
     currentView: 'login',
     categories: [],
     dishes: [],
@@ -12,21 +42,23 @@ const state = {
         name: '',
         category: '',
         sortByPrice: ''
-    }
+    },
+    adminPage: 0,
+    adminPageSize: 8
 };
 
 // Router
 const router = {
     async navigate(view, pushState = true) {
-        if (!state.user && view !== 'login') {
+        if (!state.user && view !== 'login' && view !== 'register') {
             view = 'login';
         }
         state.currentView = view;
-        
+
         if (pushState) {
             window.history.pushState({ view: view }, '', `#${view}`);
         }
-        
+
         render();
     }
 };
@@ -53,6 +85,24 @@ async function login(email, password) {
         };
         updateNav();
         router.navigate(state.user.role === 'admin' ? 'admin' : 'menu');
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+async function register(name, email, password) {
+    try {
+        const result = await api.post('/Auth/register', { name, email, password });
+        if (!result || !result.token) return false;
+        auth.save(result);
+        state.user = {
+            id: result.userId,
+            role: result.role === 'Admin' || result.role === 'Manager' ? 'admin' : 'user',
+            username: result.name
+        };
+        updateNav();
+        router.navigate('menu');
         return true;
     } catch (err) {
         return false;
@@ -98,7 +148,7 @@ function updateNav() {
             </ul>
         </div>
     `;
-    
+
     document.getElementById('btn-logout').addEventListener('click', (e) => { e.preventDefault(); logout(); });
 
     document.querySelectorAll('.user-only').forEach(el => el.classList.toggle('d-none', state.user.role !== 'user'));
@@ -117,26 +167,114 @@ function renderLogin() {
                     <input type="email" class="form-control rounded-pill" id="login-user" placeholder="Email" required>
                     <label for="login-user">Email</label>
                 </div>
-                <div class="form-floating mb-4">
+                <div class="form-floating mb-3">
                     <input type="password" class="form-control rounded-pill" id="login-pass" placeholder="Contraseña" required>
                     <label for="login-pass">Contraseña</label>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold" style="background-color: #ea4c89; border-color: #ea4c89;">Iniciar Sesión</button>
+                <div id="login-error" class="alert alert-danger py-2 small d-none mb-3 rounded-3 text-start">
+                    <i class="fa-solid fa-circle-xmark me-1"></i>Credenciales incorrectas. Verificá tu email y contraseña.
+                </div>
+                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold" style="background-color: #ea4c89; border-color: #ea4c89;" id="btn-login-submit">Iniciar Sesión</button>
             </form>
-            <div class="mt-4 pt-3 border-top text-muted small text-start">
-                <p class="mb-1"><i class="fa-solid fa-circle-info text-info me-1"></i> <b>Cuenta de prueba seed:</b></p>
-                <p class="mb-0">Administrador: <code>admin@restaurante.com</code> / <code>admin123</code></p>
-                <p class="mb-0 text-muted">Para crear una cuenta de cliente usá <code>POST /api/v1/Auth/register</code>.</p>
+            <div class="mt-4 pt-3 border-top text-center">
+                <p class="text-muted small mb-2">¿No tenés cuenta? <a href="#" id="link-register" class="fw-semibold" style="color: #ea4c89;">Registrate gratis</a></p>
+                <p class="text-muted mb-0" style="font-size: 0.75rem;">
+                    <i class="fa-solid fa-circle-info text-info me-1"></i>
+                    Admin demo: <code>admin@restaurante.com</code> / <code>admin123</code>
+                </p>
             </div>
         </div>
     `;
 
     document.getElementById('form-login').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const user = document.getElementById('login-user').value;
-        const pass = document.getElementById('login-pass').value;
-        const ok = await login(user, pass);
-        if (!ok) alert('Credenciales incorrectas');
+        const errorEl = document.getElementById('login-error');
+        const btn = document.getElementById('btn-login-submit');
+        errorEl.classList.add('d-none');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
+
+        const ok = await login(
+            document.getElementById('login-user').value,
+            document.getElementById('login-pass').value
+        );
+
+        if (!ok) {
+            errorEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = 'Iniciar Sesión';
+        }
+    });
+
+    document.getElementById('link-register').addEventListener('click', (e) => {
+        e.preventDefault();
+        router.navigate('register');
+    });
+}
+
+function renderRegister() {
+    const app = document.getElementById('app');
+    app.innerHTML = `
+        <div class="auth-card text-center">
+            <h2 class="mb-4 fw-bold" style="color: #ea4c89;"><i class="fa-solid fa-utensils me-2"></i>FoodApp</h2>
+            <p class="text-muted mb-4">Creá tu cuenta para empezar a pedir</p>
+            <form id="form-register">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control rounded-pill" id="reg-name" placeholder="Nombre" required>
+                    <label for="reg-name">Nombre completo</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="email" class="form-control rounded-pill" id="reg-email" placeholder="Email" required>
+                    <label for="reg-email">Email</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="password" class="form-control rounded-pill" id="reg-pass" placeholder="Contraseña" minlength="6" required>
+                    <label for="reg-pass">Contraseña (mín. 6 caracteres)</label>
+                </div>
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control rounded-pill" id="reg-pass-confirm" placeholder="Confirmar contraseña" required>
+                    <label for="reg-pass-confirm">Confirmar contraseña</label>
+                </div>
+                <div id="reg-error" class="alert alert-danger py-2 d-none small rounded-3 text-start mb-3"></div>
+                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold" style="background-color: #ea4c89; border-color: #ea4c89;">Crear cuenta</button>
+            </form>
+            <div class="mt-4 pt-3 border-top text-center">
+                <p class="text-muted small mb-0">¿Ya tenés cuenta? <a href="#" id="link-login" class="fw-semibold" style="color: #ea4c89;">Ingresá acá</a></p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('link-login').addEventListener('click', (e) => {
+        e.preventDefault();
+        router.navigate('login');
+    });
+
+    document.getElementById('form-register').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const pass = document.getElementById('reg-pass').value;
+        const confirm = document.getElementById('reg-pass-confirm').value;
+        const errorEl = document.getElementById('reg-error');
+
+        if (pass !== confirm) {
+            errorEl.textContent = 'Las contraseñas no coinciden.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+
+        errorEl.classList.add('d-none');
+        const btn = e.target.querySelector('button[type=submit]');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+
+        const ok = await register(name, email, pass);
+        if (!ok) {
+            errorEl.textContent = 'No se pudo crear la cuenta. El email puede estar en uso.';
+            errorEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = 'Crear cuenta';
+        }
     });
 }
 
@@ -153,7 +291,7 @@ async function renderMenu() {
             name: state.filters.name,
             category: state.filters.category,
             sortByPrice: state.filters.sortByPrice,
-            onlyActive: state.user?.role === 'user' // Users only see active
+            onlyActive: state.user?.role === 'user'
         }).toString();
 
         state.dishes = await api.get(`/Dish?${query}`);
@@ -197,13 +335,13 @@ async function renderMenu() {
                     </div>
                 </div>
             </div>
-            
+
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4 mb-5">
                 ${state.dishes.length === 0 ? '<div class="col-12 text-center py-5"><p class="text-muted h4"><i class="fa-solid fa-plate-wheat fa-3x mb-3 d-block text-muted"></i>No se encontraron platos.</p></div>' : ''}
                 ${state.dishes.map(dish => `
                     <div class="col">
                         <div class="card h-100 dish-card ${!dish.isActive ? 'border-danger opacity-75' : ''}">
-                            <img src="${dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80'}" class="card-img-top dish-image" alt="${dish.name}" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80'">
+                            <img src="${dish.image || FOOD_PLACEHOLDER}" class="card-img-top dish-image" alt="${dish.name}" onerror="setFallbackImage(this)">
                             <span class="badge bg-dark text-white category-badge">${dish.category.name}</span>
                             <div class="card-body d-flex flex-column">
                                 ${!dish.isActive ? '<span class="badge bg-danger mb-2 align-self-start">Inactivo</span>' : ''}
@@ -228,7 +366,6 @@ async function renderMenu() {
 
         app.innerHTML = html;
 
-        // Listeners for live filtering
         let debounceTimer;
         const applyFilters = () => {
             state.filters.name = document.getElementById('search-name').value;
@@ -238,18 +375,10 @@ async function renderMenu() {
         };
 
         const searchInput = document.getElementById('search-name');
-        // Set focus to the end of input after re-render if it was focused
-        const currentSearchVal = searchInput.value;
-        
+
         searchInput.addEventListener('input', (e) => {
             clearTimeout(debounceTimer);
-            // small debounce so we don't spam backend while typing fast
             debounceTimer = setTimeout(() => {
-                // To avoid losing focus on input after render:
-                // We update state, but renderMenu replaces the DOM. 
-                // A workaround is just executing applyFilters. 
-                // But replacing innerHTML drops focus. 
-                // So we save focus state:
                 state.filters.name = e.target.value;
                 state.filters.category = document.getElementById('filter-category').value;
                 state.filters.sortByPrice = document.getElementById('sort-price').value;
@@ -299,8 +428,8 @@ function addToCart(dishId) {
         });
     }
     updateCartBadge();
-    
-    // Add simple toast animation
+    showToast(`<strong>${dish.name}</strong> agregado al carrito`);
+
     const badge = document.getElementById('cart-count');
     badge.classList.add('fa-bounce');
     setTimeout(() => badge.classList.remove('fa-bounce'), 1000);
@@ -412,15 +541,18 @@ async function renderCart() {
                                     ${deliveryTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                                 </select>
                             </div>
-                            
-                            <!-- Dynamic Input Container -->
+
                             <div id="dynamic-delivery-input" class="mb-3 d-none">
                                 <label id="delivery-to-label" class="form-label small fw-semibold text-muted">Detalle</label>
                                 <input type="text" id="delivery-to" class="form-control bg-white border-0 shadow-sm">
                                 <small id="delivery-help" class="text-muted d-none mt-1"></small>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow" style="background-color: #ea4c89; border-color: #ea4c89;">Confirmar Pedido</button>
+                            <div id="order-error" class="alert alert-danger py-2 small d-none rounded-3 mb-3"></div>
+
+                            <button type="submit" id="btn-confirm-order" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow" style="background-color: #ea4c89; border-color: #ea4c89;">
+                                <i class="fa-solid fa-check me-1"></i>Confirmar Pedido
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -428,7 +560,6 @@ async function renderCart() {
         </div>
     `;
 
-    // Delivery Type Logic
     const dTypeSelect = document.getElementById('delivery-type');
     const dynamicInputContainer = document.getElementById('dynamic-delivery-input');
     const dToLabel = document.getElementById('delivery-to-label');
@@ -443,28 +574,24 @@ async function renderCart() {
         dToInput.value = '';
         dHelp.classList.add('d-none');
 
-        if (val === 1) { // Delivery
+        if (val === 1) {
             dToLabel.innerHTML = '<i class="fa-solid fa-location-dot me-1"></i>Dirección de entrega';
             dToInput.placeholder = "Ej: Av. San Martín 456, Piso 2";
             dToInput.type = 'text';
-        } else if (val === 2) { // Take away
+        } else if (val === 2) {
             dToLabel.innerHTML = '<i class="fa-solid fa-user me-1"></i>Nombre de quien retira';
             dToInput.placeholder = "Ej: Juan Pérez";
             dToInput.type = 'text';
-        } else if (val === 3) { // Dine in
+        } else if (val === 3) {
             dToLabel.innerHTML = '<i class="fa-solid fa-chair me-1"></i>Mesa asignada';
             dToInput.readOnly = true;
-            dToInput.required = false; // We set it manually
-            // Generate random table for Dine In flow
-            const mesaRandom = Math.floor(Math.random() * 20) + 1;
-            dToInput.value = `Mesa ${mesaRandom}`;
-            
+            dToInput.required = false;
+            dToInput.value = `Mesa ${Math.floor(Math.random() * 20) + 1}`;
             dHelp.innerText = "Te hemos asignado una mesa automáticamente. ¡Acércate y disfruta!";
             dHelp.classList.remove('d-none');
         }
     });
 
-    // Listeners
     document.querySelectorAll('.btn-qty').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const index = e.currentTarget.dataset.index;
@@ -492,18 +619,30 @@ async function renderCart() {
 
     document.getElementById('form-order').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+        const errorEl = document.getElementById('order-error');
+        errorEl.classList.add('d-none');
+
         const deliveryToVal = document.getElementById('delivery-to').value;
-        if(!deliveryToVal) {
-            alert('Por favor complete los datos de entrega requeridos.');
+        const deliveryTypeVal = document.getElementById('delivery-type').value;
+
+        if (!deliveryTypeVal) {
+            errorEl.textContent = 'Seleccioná una opción de entrega.';
+            errorEl.classList.remove('d-none');
+            return;
+        }
+        if (!deliveryToVal) {
+            errorEl.textContent = 'Completá los datos de entrega antes de confirmar.';
+            errorEl.classList.remove('d-none');
             return;
         }
 
-        // BranchId hardcoded a la sucursal "Casa Central" (id=1). En una UI completa habría un
-        // selector de sucursal; para el flujo de demostración default es suficiente.
+        const btn = document.getElementById('btn-confirm-order');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+
         const branchSelect = document.getElementById('branch-id');
         const orderData = {
-            deliveryType: parseInt(document.getElementById('delivery-type').value),
+            deliveryType: parseInt(deliveryTypeVal),
             branchId: branchSelect ? parseInt(branchSelect.value) : 1,
             deliveryTo: deliveryToVal,
             notes: "",
@@ -516,30 +655,33 @@ async function renderCart() {
 
         try {
             const response = await api.post('/Order', orderData);
-            if (response.id) {
-                alert(`¡Pedido #${response.id} creado con éxito!\n\nSerás redirigido a "Mis Pedidos" para ver el estado.`);
+            if (response && response.id) {
                 state.cart = [];
                 updateCartBadge();
-                router.navigate('user-orders'); // New view for user orders
+                showToast(`¡Pedido #${response.id} confirmado! Seguí el estado en Mis Pedidos.`);
+                router.navigate('user-orders');
             } else {
-                alert(`Error: ${response.message || 'No se pudo crear el pedido'}`);
+                errorEl.textContent = response?.message || 'No se pudo crear el pedido. Intentá nuevamente.';
+                errorEl.classList.remove('d-none');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Confirmar Pedido';
             }
         } catch (error) {
-            alert(`Error de red: ${error.message}`);
+            errorEl.textContent = `Error de red: ${error.message}`;
+            errorEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Confirmar Pedido';
         }
     });
 }
 
-// View for users to see their orders with a nice progress bar
 async function renderUserOrders() {
     const app = document.getElementById('app');
     app.innerHTML = '<div class="loading"><div class="spinner-border text-primary" style="color: #ea4c89 !important;"></div><p class="mt-3 fw-semibold">Cargando tus pedidos...</p></div>';
 
     try {
-        // In a real app we'd filter by userId. Here we fetch all and assume the user sees the latest ones they made.
-        // For simulation, we'll just show the last 5 orders in the system.
         const allOrders = await api.get('/Order');
-        const orders = allOrders.slice(0, 5); // Take last 5
+        const orders = allOrders.slice(0, 5);
 
         if(orders.length === 0) {
             app.innerHTML = `
@@ -562,7 +704,7 @@ async function renderUserOrders() {
 
         orders.forEach(o => {
             const statusId = o.overallStatus.id;
-            
+
             html += `
             <div class="col-12">
                 <div class="card shadow-sm border-0 rounded-4 p-4 mb-3">
@@ -577,7 +719,6 @@ async function renderUserOrders() {
                         </div>
                     </div>
 
-                    <!-- Progress Bar -->
                     <div class="order-progress">
                         <div class="progress-step ${statusId >= 1 ? (statusId > 1 ? 'completed' : 'active') : ''}">
                             <div class="progress-icon"><i class="fa-solid fa-clock"></i></div>
@@ -629,91 +770,116 @@ async function renderAdmin() {
         const orders = await api.get('/Order');
         const statuses = await api.get('/Order/statuses');
 
+        const totalPages = Math.ceil(orders.length / state.adminPageSize);
+        const start = state.adminPage * state.adminPageSize;
+        const pageOrders = orders.slice(start, start + state.adminPageSize);
+
         app.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold text-danger"><i class="fa-solid fa-bell-concierge me-2"></i>Centro de Comandas</h2>
-                <button class="btn btn-dark rounded-pill fw-bold" onclick="renderAdmin()"><i class="fa-solid fa-rotate-right me-1"></i>Actualizar</button>
+                <div>
+                    <h2 class="fw-bold mb-1"><i class="fa-solid fa-bell-concierge me-2" style="color:#ea4c89;"></i>Centro de Comandas</h2>
+                    <span class="text-muted small">${orders.length} pedido${orders.length !== 1 ? 's' : ''} registrado${orders.length !== 1 ? 's' : ''}</span>
+                </div>
+                <button class="btn btn-dark rounded-pill fw-bold px-4" onclick="renderAdmin()">
+                    <i class="fa-solid fa-rotate-right me-1"></i>Actualizar
+                </button>
             </div>
-            
-            <div class="row">
-                <div class="col-md-3 mb-4">
-                    <div class="card shadow-sm border-0 rounded-4 bg-primary text-white text-center p-3 h-100">
-                        <h1 class="display-4 fw-bold mb-0">${orders.filter(o => o.overallStatus.id === 1).length}</h1>
-                        <span class="fw-semibold">Pendientes</span>
+
+            <!-- KPI Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:var(--bs-warning-bg-subtle);">
+                        <h1 class="display-5 fw-bold mb-1 text-warning-emphasis">${orders.filter(o => o.overallStatus.id === 1).length}</h1>
+                        <span class="small fw-semibold text-muted"><i class="fa-solid fa-clock me-1"></i>Pendientes</span>
                     </div>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card shadow-sm border-0 rounded-4 bg-warning text-dark text-center p-3 h-100">
-                        <h1 class="display-4 fw-bold mb-0">${orders.filter(o => o.overallStatus.id === 2).length}</h1>
-                        <span class="fw-semibold">En Preparación</span>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:var(--bs-primary-bg-subtle);">
+                        <h1 class="display-5 fw-bold mb-1 text-primary-emphasis">${orders.filter(o => o.overallStatus.id === 2).length}</h1>
+                        <span class="small fw-semibold text-muted"><i class="fa-solid fa-fire-burner me-1"></i>En preparación</span>
                     </div>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card shadow-sm border-0 rounded-4 bg-info text-white text-center p-3 h-100">
-                        <h1 class="display-4 fw-bold mb-0">${orders.filter(o => o.overallStatus.id === 3).length}</h1>
-                        <span class="fw-semibold">Listos</span>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:var(--bs-info-bg-subtle);">
+                        <h1 class="display-5 fw-bold mb-1 text-info-emphasis">${orders.filter(o => o.overallStatus.id === 3).length}</h1>
+                        <span class="small fw-semibold text-muted"><i class="fa-solid fa-box-open me-1"></i>Listos</span>
                     </div>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card shadow-sm border-0 rounded-4 bg-success text-white text-center p-3 h-100">
-                        <h1 class="display-4 fw-bold mb-0">${orders.filter(o => o.overallStatus.id === 5).length}</h1>
-                        <span class="fw-semibold">Entregados hoy</span>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:var(--bs-success-bg-subtle);">
+                        <h1 class="display-5 fw-bold mb-1 text-success-emphasis">${orders.filter(o => o.overallStatus.id === 5).length}</h1>
+                        <span class="small fw-semibold text-muted"><i class="fa-solid fa-check me-1"></i>Entregados</span>
                     </div>
                 </div>
             </div>
 
-            <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-4">Pedido #</th>
-                                <th>Info Entrega</th>
-                                <th>Estado Órden</th>
-                                <th>Gestión de Platos</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${orders.length === 0 ? '<tr><td colspan="4" class="text-center py-5 text-muted">No hay órdenes registradas.</td></tr>' : ''}
-                            ${orders.map(o => `
-                                <tr>
-                                    <td class="ps-4 py-3">
-                                        <span class="fw-bold d-block text-dark">#${o.id}</span>
-                                        <span class="small text-muted">${new Date(o.createdAt).toLocaleTimeString()}</span>
-                                    </td>
-                                    <td>
+            <!-- Order Cards -->
+            <div class="row g-3 mb-4">
+                ${pageOrders.length === 0 ? `
+                    <div class="col-12">
+                        <div class="text-center py-5 text-muted bg-white rounded-4 shadow-sm">
+                            <i class="fa-solid fa-inbox fa-3x mb-3 d-block"></i>
+                            <h5 class="fw-semibold">No hay pedidos registrados</h5>
+                        </div>
+                    </div>
+                ` : pageOrders.map(o => `
+                    <div class="col-12 col-lg-6">
+                        <div class="card admin-order-card">
+                            <div class="card-header bg-body-tertiary border-0 d-flex justify-content-between align-items-start px-4 py-3">
+                                <div>
+                                    <span class="fw-bold fs-6 text-body">#${o.id}</span>
+                                    <span class="text-muted small ms-2">${new Date(o.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <div class="mt-1">
                                         <span class="badge bg-light text-dark border me-1">${o.deliveryType.name}</span>
-                                        <span class="fw-semibold text-primary">${o.deliveryTo}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge ${getStatusBadgeClass(o.overallStatus.id)} px-3 py-2 rounded-pill">${o.overallStatus.name}</span>
-                                    </td>
-                                    <td class="pe-4">
-                                        <div class="bg-light rounded-3 p-2 border">
-                                            ${o.items.map(item => `
-                                                <div class="d-flex justify-content-between align-items-center p-1 border-bottom border-white last-border-0">
-                                                    <span class="small fw-semibold text-dark w-50 text-truncate" title="${item.dishName}">
-                                                        ${item.quantity}x ${item.dishName} 
-                                                        ${item.notes ? `<br><small class="text-danger fw-normal"><i class="fa-solid fa-triangle-exclamation me-1"></i>${item.notes}</small>` : ''}
-                                                    </span>
-                                                    <div class="dropdown">
-                                                        <button class="btn btn-sm ${getStatusBtnClass(item.status.id)} dropdown-toggle py-1 px-2 rounded-pill shadow-sm fw-bold" type="button" data-bs-toggle="dropdown" style="font-size: 0.75rem;">
-                                                            ${item.status.name}
-                                                        </button>
-                                                        <ul class="dropdown-menu shadow border-0">
-                                                            ${statuses.map(s => `<li><a class="dropdown-item small py-2 btn-change-status" href="#" data-item-id="${item.id}" data-status-id="${s.id}">${s.name}</a></li>`).join('')}
-                                                        </ul>
-                                                    </div>
-                                                </div>
+                                        <span class="small text-body fw-semibold">${o.deliveryTo}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end flex-shrink-0 ms-3">
+                                    <span class="badge ${getStatusBadgeClass(o.overallStatus.id)} rounded-pill px-3 py-2">${o.overallStatus.name}</span>
+                                    <div class="fw-bold text-body mt-1">$${o.price.toFixed(2)}</div>
+                                </div>
+                            </div>
+                            ${o.items.map(item => `
+                                <div class="order-item-row">
+                                    <div class="flex-grow-1 me-3 min-width-0">
+                                        <span class="fw-semibold text-body">${item.quantity}× ${item.dishName}</span>
+                                        ${item.notes ? `<div class="small text-danger mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>${item.notes}</div>` : ''}
+                                    </div>
+                                    <div class="dropdown flex-shrink-0">
+                                        <button class="btn btn-sm ${getStatusBtnClass(item.status.id)} dropdown-toggle rounded-pill px-3 fw-semibold" type="button" data-bs-toggle="dropdown" style="font-size:0.78rem;white-space:nowrap;">
+                                            ${item.status.name}
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                            ${statuses.map(s => `
+                                                <li>
+                                                    <a class="dropdown-item small py-2 btn-change-status" href="#" data-item-id="${item.id}" data-status-id="${s.id}">
+                                                        <span class="me-2 badge ${getStatusBadgeClass(s.id)}" style="width:8px;height:8px;border-radius:50%;padding:0;display:inline-block;">&nbsp;</span>${s.name}
+                                                    </a>
+                                                </li>
                                             `).join('')}
-                                        </div>
-                                    </td>
-                                </tr>
+                                        </ul>
+                                    </div>
+                                </div>
                             `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
+                    </div>
+                `).join('')}
             </div>
+
+            <!-- Pagination -->
+            ${totalPages > 1 ? `
+                <nav class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="text-muted small">Página ${state.adminPage + 1} de ${totalPages} &nbsp;·&nbsp; ${orders.length} pedidos</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" id="btn-prev-page" ${state.adminPage === 0 ? 'disabled' : ''}>
+                            <i class="fa-solid fa-chevron-left me-1"></i>Anterior
+                        </button>
+                        <button class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" id="btn-next-page" ${state.adminPage >= totalPages - 1 ? 'disabled' : ''}>
+                            Siguiente<i class="fa-solid fa-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </nav>
+            ` : ''}
         `;
 
         document.querySelectorAll('.btn-change-status').forEach(btn => {
@@ -722,8 +888,18 @@ async function renderAdmin() {
                 const itemId = e.currentTarget.dataset.itemId;
                 const statusId = e.currentTarget.dataset.statusId;
                 await api.put(`/Order/item/${itemId}/status/${statusId}`, {});
-                renderAdmin(); // Refresh
+                renderAdmin();
             });
+        });
+
+        document.getElementById('btn-prev-page')?.addEventListener('click', () => {
+            state.adminPage--;
+            renderAdmin();
+        });
+
+        document.getElementById('btn-next-page')?.addEventListener('click', () => {
+            state.adminPage++;
+            renderAdmin();
         });
 
     } catch (error) {
@@ -744,7 +920,7 @@ async function renderManageDishes() {
                 <h2 class="fw-bold text-danger"><i class="fa-solid fa-pen-to-square me-2"></i>Gestión del Menú</h2>
                 <button class="btn btn-primary rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#dishModal" id="btn-add-new" style="background-color: #ea4c89; border-color: #ea4c89;"><i class="fa-solid fa-plus me-1"></i>Nuevo Plato</button>
             </div>
-            
+
             <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -762,7 +938,7 @@ async function renderManageDishes() {
                                 <tr>
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center">
-                                            <img src="${d.image || 'https://via.placeholder.com/40'}" class="rounded shadow-sm me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                                            <img src="${d.image || FOOD_PLACEHOLDER}" class="rounded shadow-sm me-3" style="width: 40px; height: 40px; object-fit: cover;" onerror="setFallbackImage(this)">
                                             <strong>${d.name}</strong>
                                         </div>
                                     </td>
@@ -789,13 +965,16 @@ async function renderManageDishes() {
             <div class="modal fade" id="dishModal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow-lg rounded-4">
-                        <div class="modal-header border-0 bg-light pb-0">
+                        <div class="modal-header border-0 bg-light pb-0 px-4 pt-4">
                             <h5 class="modal-title fw-bold" id="modalTitle">Nuevo Plato</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body p-4 bg-light">
                             <form id="dish-form">
                                 <input type="hidden" id="dish-id">
+
+                                <div id="dish-form-error" class="alert alert-danger py-2 small d-none rounded-3 mb-3"></div>
+
                                 <div class="card shadow-sm border-0 rounded-3 p-3 mb-3">
                                     <div class="form-floating mb-3">
                                         <input type="text" id="dish-name" class="form-control fw-bold" placeholder="Nombre" required>
@@ -806,11 +985,11 @@ async function renderManageDishes() {
                                         <label>Ingredientes / Descripción</label>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row g-3 mb-3">
                                     <div class="col-6">
                                         <div class="form-floating card shadow-sm border-0 rounded-3">
-                                            <input type="number" step="0.01" id="dish-price" class="form-control fw-bold text-success" placeholder="0.00" required>
+                                            <input type="number" step="0.01" min="0.01" id="dish-price" class="form-control fw-bold text-success" placeholder="0.00" required>
                                             <label>Precio ($)</label>
                                         </div>
                                     </div>
@@ -823,20 +1002,25 @@ async function renderManageDishes() {
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="form-floating mb-3 card shadow-sm border-0 rounded-3">
-                                    <input type="url" id="dish-image" class="form-control" placeholder="URL de la foto">
-                                    <label><i class="fa-solid fa-image me-1"></i>URL de Fotografía</label>
+
+                                <div class="card shadow-sm border-0 rounded-3 p-3 mb-3">
+                                    <div class="form-floating mb-3">
+                                        <input type="url" id="dish-image" class="form-control" placeholder="URL directa de la imagen (clic derecho → Copiar dirección de imagen)">
+                                        <label><i class="fa-solid fa-image me-1"></i>URL de Fotografía (opcional)</label>
+                                    </div>
+                                    <img id="dish-image-preview" src="${FOOD_PLACEHOLDER}" alt="Vista previa">
                                 </div>
-                                
+
                                 <div class="card shadow-sm border-0 rounded-3 p-3 mb-4 border-start border-success border-4">
                                     <div class="form-check form-switch m-0">
                                         <input class="form-check-input fs-5 mt-0" type="checkbox" role="switch" id="dish-active" checked>
                                         <label class="form-check-label fw-bold ms-2 mt-1" for="dish-active">Plato Disponible para Clientes</label>
                                     </div>
                                 </div>
-                                
-                                <button type="submit" class="btn btn-dark w-100 py-3 fw-bold rounded-pill shadow">Guardar Plato</button>
+
+                                <button type="submit" id="btn-save-dish" class="btn btn-dark w-100 py-3 fw-bold rounded-pill shadow">
+                                    <i class="fa-solid fa-floppy-disk me-1"></i>Guardar Plato
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -844,18 +1028,32 @@ async function renderManageDishes() {
             </div>
         `;
 
-        // Listeners
         const modal = new bootstrap.Modal(document.getElementById('dishModal'));
+        const imageInput = document.getElementById('dish-image');
+        const imagePreview = document.getElementById('dish-image-preview');
+
+        // Live image preview
+        imageInput.addEventListener('input', () => {
+            const url = imageInput.value.trim();
+            if (url) {
+                imagePreview.src = url;
+                imagePreview.onerror = () => setFallbackImage(imagePreview);
+            } else {
+                imagePreview.src = FOOD_PLACEHOLDER;
+            }
+        });
 
         document.getElementById('btn-add-new').addEventListener('click', () => {
             document.getElementById('modalTitle').innerText = 'Nuevo Plato';
             document.getElementById('dish-form').reset();
             document.getElementById('dish-id').value = '';
+            document.getElementById('dish-form-error').classList.add('d-none');
+            imagePreview.src = FOOD_PLACEHOLDER;
         });
 
         document.querySelectorAll('.btn-edit-dish').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = e.currentTarget.dataset.id; // use currentTarget for icon clicks
+                const id = e.currentTarget.dataset.id;
                 const dish = dishes.find(d => d.id === id);
                 document.getElementById('modalTitle').innerText = 'Editar Plato';
                 document.getElementById('dish-id').value = dish.id;
@@ -865,51 +1063,76 @@ async function renderManageDishes() {
                 document.getElementById('dish-category').value = dish.category.id;
                 document.getElementById('dish-image').value = dish.image || '';
                 document.getElementById('dish-active').checked = dish.isActive;
+                document.getElementById('dish-form-error').classList.add('d-none');
+                imagePreview.src = dish.image || FOOD_PLACEHOLDER;
+                imagePreview.onerror = dish.image ? () => setFallbackImage(imagePreview) : null;
                 modal.show();
             });
         });
 
         document.getElementById('dish-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const errorEl = document.getElementById('dish-form-error');
+            errorEl.classList.add('d-none');
+
+            const price = parseFloat(document.getElementById('dish-price').value);
+            if (!price || price <= 0) {
+                errorEl.textContent = 'El precio debe ser un valor mayor a cero.';
+                errorEl.classList.remove('d-none');
+                errorEl.classList.add('shake');
+                setTimeout(() => errorEl.classList.remove('shake'), 400);
+                return;
+            }
+
             const id = document.getElementById('dish-id').value;
             const dishData = {
-                name: document.getElementById('dish-name').value,
-                description: document.getElementById('dish-description').value,
-                price: parseFloat(document.getElementById('dish-price').value),
+                name: document.getElementById('dish-name').value.trim(),
+                description: document.getElementById('dish-description').value.trim(),
+                price,
                 category: parseInt(document.getElementById('dish-category').value),
-                image: document.getElementById('dish-image').value,
+                image: document.getElementById('dish-image').value.trim(),
                 isActive: document.getElementById('dish-active').checked
             };
 
-            try {
-                let response;
-                if (id) {
-                    response = await api.put(`/Dish/${id}`, dishData);
-                } else {
-                    response = await api.post('/Dish', dishData);
-                }
+            const btn = document.getElementById('btn-save-dish');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
 
-                if (response.id || response.message === undefined) {
+            try {
+                const response = id
+                    ? await api.put(`/Dish/${id}`, dishData)
+                    : await api.post('/Dish', dishData);
+
+                if (response && response.id) {
                     modal.hide();
+                    showToast(`Plato ${id ? 'actualizado' : 'creado'} exitosamente`);
                     renderManageDishes();
                 } else {
-                    alert(`Error: ${response.message}`);
+                    const msg = response?.message || response?.title || 'Ocurrió un error al guardar el plato.';
+                    errorEl.textContent = msg;
+                    errorEl.classList.remove('d-none');
+                    errorEl.classList.add('shake');
+                    setTimeout(() => errorEl.classList.remove('shake'), 400);
                 }
             } catch (error) {
-                alert(`Error: ${error.message}`);
+                errorEl.textContent = error.message;
+                errorEl.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Guardar Plato';
             }
         });
 
         document.querySelectorAll('.btn-delete-dish').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                if (confirm('Atención: Si este plato tiene órdenes (comandas) asignadas en el historial, la base de datos no permitirá borrarlo.\n\n¿Estás seguro de continuar?')) {
+                if (confirm('¿Estás seguro de eliminar este plato?\n\nSi tiene órdenes asignadas, se realizará un borrado lógico (quedará oculto).')) {
                     const id = e.currentTarget.dataset.id;
                     const response = await api.delete(`/Dish/${id}`);
-                    if (response.ok) {
+                    if (response === null) {
+                        showToast('Plato eliminado correctamente', 'success');
                         renderManageDishes();
                     } else {
-                        const err = await response.json();
-                        alert(`Operación bloqueada por integridad de datos:\n\n${err.message || 'No se pudo eliminar'}`);
+                        showToast(response?.message || 'No se pudo eliminar el plato.', 'error');
                     }
                 }
             });
@@ -946,6 +1169,7 @@ function getStatusBtnClass(id) {
 function render() {
     switch(state.currentView) {
         case 'login': renderLogin(); break;
+        case 'register': renderRegister(); break;
         case 'menu': renderMenu(); break;
         case 'cart': renderCart(); break;
         case 'user-orders': renderUserOrders(); break;
@@ -957,6 +1181,8 @@ function render() {
 
 // Global Nav setup
 window.router = router;
+window.renderAdmin = renderAdmin;
+window.renderUserOrders = renderUserOrders;
 document.getElementById('nav-menu').addEventListener('click', (e) => { e.preventDefault(); router.navigate('menu'); });
 document.getElementById('nav-home').addEventListener('click', (e) => { e.preventDefault(); router.navigate('menu'); });
 document.getElementById('nav-cart').addEventListener('click', (e) => { e.preventDefault(); router.navigate('cart'); });

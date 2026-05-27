@@ -168,3 +168,71 @@ body {
         box-shadow: 0 0 0 4px #4a182a;
     }
 }
+
+/* Toast Container */
+#toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1090;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 300px;
+}
+
+/* Progress bar completed line */
+.order-progress .progress-line {
+    flex: 1;
+    height: 4px;
+    background: var(--bs-secondary-bg);
+    align-self: center;
+    margin: 0 4px;
+    margin-bottom: 28px;
+    border-radius: 2px;
+    transition: background 0.3s;
+}
+.order-progress .progress-line.filled {
+    background: #198754;
+}
+
+/* Admin order cards */
+.admin-order-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    transition: box-shadow 0.2s;
+}
+.admin-order-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+.admin-order-card .order-item-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.admin-order-card .order-item-row:last-child {
+    border-bottom: none;
+}
+
+/* Dish form error shake */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+.shake {
+    animation: shake 0.35s ease;
+}
+
+/* Image preview in modal */
+#dish-image-preview {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+}
