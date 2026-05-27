@@ -1,4 +1,4 @@
-import { api } from './services/api.js';
+import { api, auth } from './services/api.js';
 
 // App State
 const state = {
@@ -40,31 +40,43 @@ window.addEventListener('popstate', (event) => {
     }
 });
 
-// Auth Handling
-function login(username, password) {
-    if (username === 'admin' && password === 'admin') {
-        state.user = { role: 'admin', username: 'Administrador' };
-    } else if (username === 'user' && password === 'user') {
-        state.user = { role: 'user', username: 'Cliente Invitado' };
-    } else {
+// Auth Handling — backed por JWT real + localStorage
+async function login(email, password) {
+    try {
+        const result = await api.post('/Auth/login', { email, password });
+        if (!result || !result.token) return false;
+        auth.save(result);
+        state.user = {
+            id: result.userId,
+            role: result.role === 'Admin' || result.role === 'Manager' ? 'admin' : 'user',
+            username: result.name
+        };
+        updateNav();
+        router.navigate(state.user.role === 'admin' ? 'admin' : 'menu');
+        return true;
+    } catch (err) {
         return false;
     }
-    
-    updateNav();
-    if(state.user.role === 'admin') {
-        router.navigate('admin');
-    } else {
-        router.navigate('menu');
-    }
-    return true;
 }
 
 function logout() {
+    auth.clear();
     state.user = null;
     state.cart = [];
     updateCartBadge();
     updateNav();
     router.navigate('login');
+}
+
+function restoreSession() {
+    const saved = auth.get();
+    if (!saved) return false;
+    state.user = {
+        id: saved.userId,
+        role: saved.role === 'Admin' || saved.role === 'Manager' ? 'admin' : 'user',
+        username: saved.name
+    };
+    return true;
 }
 
 function updateNav() {
@@ -102,8 +114,8 @@ function renderLogin() {
             <p class="text-muted mb-4">Ingresa a tu cuenta para continuar</p>
             <form id="form-login">
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control rounded-pill" id="login-user" placeholder="Usuario" required>
-                    <label for="login-user">Usuario</label>
+                    <input type="email" class="form-control rounded-pill" id="login-user" placeholder="Email" required>
+                    <label for="login-user">Email</label>
                 </div>
                 <div class="form-floating mb-4">
                     <input type="password" class="form-control rounded-pill" id="login-pass" placeholder="Contraseña" required>
@@ -112,20 +124,19 @@ function renderLogin() {
                 <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold" style="background-color: #ea4c89; border-color: #ea4c89;">Iniciar Sesión</button>
             </form>
             <div class="mt-4 pt-3 border-top text-muted small text-start">
-                <p class="mb-1"><i class="fa-solid fa-circle-info text-info me-1"></i> <b>Cuentas de prueba:</b></p>
-                <p class="mb-1">Cliente: <code>user</code> / <code>user</code></p>
-                <p class="mb-0">Administrador: <code>admin</code> / <code>admin</code></p>
+                <p class="mb-1"><i class="fa-solid fa-circle-info text-info me-1"></i> <b>Cuenta de prueba seed:</b></p>
+                <p class="mb-0">Administrador: <code>admin@restaurante.com</code> / <code>admin123</code></p>
+                <p class="mb-0 text-muted">Para crear una cuenta de cliente usá <code>POST /api/v1/Auth/register</code>.</p>
             </div>
         </div>
     `;
 
-    document.getElementById('form-login').addEventListener('submit', (e) => {
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('login-user').value;
         const pass = document.getElementById('login-pass').value;
-        if(!login(user, pass)) {
-            alert('Credenciales incorrectas');
-        }
+        const ok = await login(user, pass);
+        if (!ok) alert('Credenciales incorrectas');
     });
 }
 
@@ -321,6 +332,7 @@ async function renderCart() {
     }
 
     const deliveryTypes = await api.get('/Order/delivery-types');
+    const branches = await api.get('/Branch');
 
     app.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -387,6 +399,12 @@ async function renderCart() {
 
                         <form id="form-order" class="bg-light p-3 rounded-3">
                             <h6 class="fw-bold mb-3"><i class="fa-solid fa-truck-fast me-2"></i>Datos de Entrega</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-muted">Sucursal</label>
+                                <select id="branch-id" class="form-select bg-white border-0 shadow-sm" required>
+                                    ${branches.map(b => `<option value="${b.id}">${b.name} — ${b.address}</option>`).join('')}
+                                </select>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold text-muted">¿Cómo lo quieres?</label>
                                 <select id="delivery-type" class="form-select bg-white border-0 shadow-sm" required>
@@ -481,10 +499,14 @@ async function renderCart() {
             return;
         }
 
+        // BranchId hardcoded a la sucursal "Casa Central" (id=1). En una UI completa habría un
+        // selector de sucursal; para el flujo de demostración default es suficiente.
+        const branchSelect = document.getElementById('branch-id');
         const orderData = {
             deliveryType: parseInt(document.getElementById('delivery-type').value),
+            branchId: branchSelect ? parseInt(branchSelect.value) : 1,
             deliveryTo: deliveryToVal,
-            notes: "", // Simplified for UI
+            notes: "",
             items: state.cart.map(item => ({
                 dishId: item.dishId,
                 quantity: item.quantity,
@@ -942,5 +964,10 @@ document.getElementById('nav-orders').addEventListener('click', (e) => { e.preve
 document.getElementById('nav-admin').addEventListener('click', (e) => { e.preventDefault(); router.navigate('admin'); });
 document.getElementById('nav-manage-dishes').addEventListener('click', (e) => { e.preventDefault(); router.navigate('manage-dishes'); });
 
-// Init app
-router.navigate('login');
+// Init app: si hay sesión persistida, entrar directo a la vista correspondiente.
+if (restoreSession()) {
+    updateNav();
+    router.navigate(state.user.role === 'admin' ? 'admin' : 'menu');
+} else {
+    router.navigate('login');
+}
