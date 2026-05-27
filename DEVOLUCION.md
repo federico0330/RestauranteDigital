@@ -46,75 +46,80 @@ existente para los inputs de venta.
 
 ## Capacidades técnicas que demuestra
 
-**Clean Architecture funcional**, no decorativa. Las 4 capas existen con
-sus responsabilidades y dependencias correctas. Los servicios se testean
-con mocks porque las interfaces de repo están en `Application`, no en
-`Infrastructure`.
+Las 4 capas de Clean Architecture están separadas en serio: las interfaces
+de los repositorios viven en `Application` y `Infrastructure` las
+implementa, así que los servicios se pueden testear con mocks sin levantar
+EF Core ni SQL Server. No es decoración, es lo que hace que los 26 tests
+corran en 37 ms.
 
-**Transacciones explícitas para operaciones multi-entidad**. El
-`IUnitOfWork` expone `BeginTransactionAsync`, `CommitTransactionAsync` y
-`RollbackTransactionAsync`. La creación de una orden (que toca `Order`,
-`OrderItem` y `BranchDishStock` de varias filas) corre dentro de una sola
-transacción. Si algo falla, rollback completo.
+Las operaciones que tocan más de una entidad pasan por
+`BeginTransactionAsync` / `CommitTransactionAsync` /
+`RollbackTransactionAsync` del `IUnitOfWork`. Crear una orden inserta el
+`Order`, los `OrderItem` y descuenta de varias filas de `BranchDishStock`
+dentro de la misma transacción. Si una de esas operaciones falla, vuelve
+todo atrás.
 
-**Eventos de dominio observables sin coupling**. Cuando el stock cae bajo
-el mínimo, se emite un warning estructurado con Serilog incluyendo
-`branch`, `dish`, `qty`, `min`. Listo para enganchar a un sink remoto
-(Seq, Elastic, Datadog) o a un job que dispare notificaciones, sin que el
-servicio sepa quién consume el evento.
+Cuando el descuento deja una sucursal por debajo del mínimo, el
+`OrderService` emite un warning con Serilog incluyendo `branch`, `dish`,
+`qty` y `min`. Es un evento de dominio loggeado, no acoplado a una
+notificación particular. Para mandarlo a un mail, Slack o un sink remoto
+(Seq, Elastic, Datadog) alcanza con configurar el sink — el servicio no se
+entera.
 
-**Soft delete inteligente**, no automático. Solo se hace soft delete
-cuando hay órdenes históricas que perderían la referencia al plato.
-Cuando no hay órdenes, hard delete normal — no acumulamos basura.
+El soft delete sobre `Dish` no es automático. Si el plato nunca tuvo
+órdenes, hard delete y listo. Si las tuvo, `IsDeleted = true` y
+`Available = false`, para que las órdenes históricas sigan resolviendo el
+nombre del plato. No acumulamos basura por defecto.
 
-**Seguridad razonable de fábrica**. Passwords con BCrypt
-(`workFactor = 11`), JWT con lifetime corto (12h), roles validados a
-nivel controller con `[Authorize(Roles = ...)]`, validación de inputs con
-FluentValidation antes de tocar el servicio.
+Sobre seguridad: passwords con BCrypt (`workFactor = 11`), JWT con
+lifetime de 12h, roles validados a nivel controller con
+`[Authorize(Roles = ...)]`, validación de inputs con FluentValidation
+antes de que el request llegue al servicio.
 
-**Logging estructurado con Serilog**. No `Console.WriteLine`, no
-`ILogger` sin estructura. Cada evento crítico tiene un mensaje template
-con sus placeholders y se puede consultar después con queries.
+El logging es Serilog estructurado, no `Console.WriteLine` ni `ILogger`
+plano. Los mensajes están templateados, así que después se pueden filtrar
+por `branch=2` o `dish={guid}` en cualquier sink que entienda JSON.
 
-**Migrations EF Core auto-aplicadas al arranque**. Sin pasos manuales,
-sin `update-database` mental cada vez. Cuando el container arranca, la DB
-queda en el último estado y con el seed cargado.
+Las migrations EF Core se aplican solas al arrancar el container. No hay
+que acordarse de correr `update-database` antes de cada deploy.
 
-**Suite de tests pragmática**. 26 tests sobre los caminos de negocio
-críticos (auth, soft delete, descuento de stock, transiciones de pedidos
-mayoristas, resolución de garantías). No es 100% coverage; es la
-cobertura que vale la pena defender en code review.
+26 tests con xUnit + Moq sobre los caminos de negocio que importan: auth,
+soft delete, descuento de stock por sucursal, transiciones de pedidos
+mayoristas, resolución de garantías. No busqué 100% de coverage; busqué
+los tests que vale la pena defender en una review.
 
 ## Stack y por qué
 
-- **.NET 8 + EF Core 8** — performance, tooling maduro, soporte LTS hasta
-  2026. Mismo stack que el otro proyecto de showcase: refuerza dominio.
-- **SQL Server** — transacciones serias, comportamiento predecible bajo
-  concurrencia, support de migrations EF Core sin sorpresas.
-- **Vanilla JS + Bootstrap** en frontend — el scope del proyecto no
-  justifica React/Vue. Se sirve estático con Nginx, sin build step.
-- **BCrypt + JWT** en lugar de Identity completo — Identity es demasiado
-  pesado para 1 entidad `User` con 3 roles. Lo que se gana en simpleza
-  vale más que las pocas features que se pierden.
+.NET 8 con EF Core 8 porque el tooling está maduro y el soporte LTS llega
+hasta 2026. Es el mismo stack que uso en `TicketingSystem`, así que
+refuerza dominio del entorno en vez de dispersarlo.
+
+SQL Server porque las transacciones se comportan como uno espera y la
+historia de EF Core sobre SQL Server no tiene sorpresas raras bajo
+concurrencia.
+
+Frontend vanilla con Bootstrap. El scope no justifica meterse con React o
+Vue: se sirve estático con Nginx, no hay build step, y el HTML es
+auditable a ojo.
+
+BCrypt + JWT directo en vez de ASP.NET Identity. Para una sola entidad
+`User` con 3 roles, Identity trae mucho más de lo que necesito. Lo que se
+gana en simpleza vale más que las pocas features que se pierden.
 
 ## Lo que pulí en esta entrega
 
-Sobre la base inicial (CRUD de platos + pedidos, sin auth, sin stock por
-sucursal, sin tests, sin README):
+La base original era un CRUD de platos y pedidos sin auth, sin stock por
+sucursal, sin tests y sin README. Sobre eso agregué:
 
-- Auth real con BCrypt + JWT, persistencia frontend con localStorage.
-- 6 entidades nuevas (`User`, `Branch`, `BranchDishStock`,
-  `WholesaleOrder`, `WholesaleOrderItem`, `WarrantyClaim`).
-- 4 servicios nuevos (`AuthService`, `BranchService`,
-  `WholesaleOrderService`, `WarrantyService`).
-- 4 controllers nuevos con permisos por rol.
-- `OrderService` extendido: descuenta stock por sucursal, emite alerta
-  de stock bajo.
-- `DishService` con soft delete cuando hay histórico.
-- FluentValidation para los requests críticos.
-- Middleware global de manejo de errores.
-- Serilog para logging estructurado.
+- Auth real con BCrypt y JWT, persistencia del token en localStorage.
+- 6 entidades nuevas: `User`, `Branch`, `BranchDishStock`,
+  `WholesaleOrder`, `WholesaleOrderItem`, `WarrantyClaim`.
+- 4 servicios y 4 controllers nuevos, con permisos por rol donde aplica.
+- `OrderService` descontando stock por sucursal y emitiendo alerta cuando
+  cae bajo el mínimo.
+- `DishService` con soft delete cuando hay órdenes históricas asociadas.
+- FluentValidation, middleware global de errores, Serilog estructurado.
 - 26 tests xUnit + Moq.
-- Migration `AddMultiBranchAuth` con seed de sucursales y admin.
-- Workflow CI con build + test.
-- README, CLAUDE.md y este documento.
+- Migration `AddMultiBranchAuth` con seed de 3 sucursales y un admin.
+- Workflow CI con build y test.
+- README extendido, CLAUDE.md y este documento.
