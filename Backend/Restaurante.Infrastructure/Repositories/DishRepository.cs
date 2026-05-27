@@ -17,7 +17,8 @@ public class DishRepository : GenericRepository<Dish>, IDishRepository
 
     public async Task<IEnumerable<Dish>> GetDishesAsync(string? name, int? categoryId, string? sortByPrice, bool onlyActive)
     {
-        var query = _dbSet.Include(d => d.Category).AsQueryable();
+        // Los soft-deleted nunca aparecen en listados públicos.
+        var query = _dbSet.Include(d => d.Category).Where(d => !d.IsDeleted).AsQueryable();
 
         if (onlyActive)
         {

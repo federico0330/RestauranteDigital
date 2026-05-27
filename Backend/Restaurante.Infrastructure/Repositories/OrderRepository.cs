@@ -20,6 +20,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         var query = _dbSet
             .Include(o => o.DeliveryType)
             .Include(o => o.OverallStatus)
+            .Include(o => o.Branch)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Dish)
             .Include(o => o.OrderItems)
@@ -44,6 +45,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         return await _dbSet
             .Include(o => o.DeliveryType)
             .Include(o => o.OverallStatus)
+            .Include(o => o.Branch)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Dish)
             .Include(o => o.OrderItems)

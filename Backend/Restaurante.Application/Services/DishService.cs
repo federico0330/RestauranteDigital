@@ -88,8 +88,17 @@ public class DishService : IDishService
         var dish = await _unitOfWork.Dishes.GetByIdAsync(id);
         if (dish == null) return false;
 
+        // Si el plato tiene órdenes históricas, soft delete: lo marcamos como eliminado
+        // y no disponible, sin romper la integridad referencial de las órdenes pasadas.
         if (await _unitOfWork.Dishes.HasAssociatedOrdersAsync(id))
-            return false;
+        {
+            dish.IsDeleted = true;
+            dish.Available = false;
+            dish.UpdateDate = DateTime.UtcNow;
+            _unitOfWork.Dishes.Update(dish);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
 
         _unitOfWork.Dishes.Delete(dish);
         await _unitOfWork.SaveChangesAsync();

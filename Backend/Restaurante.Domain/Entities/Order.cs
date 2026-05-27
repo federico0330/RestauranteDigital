@@ -20,5 +20,8 @@ public class Order
     public DateTime CreateDate { get; set; }
     public DateTime UpdateDate { get; set; }
 
+    public int BranchId { get; set; }
+    public Branch Branch { get; set; } = null!;
+
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 }

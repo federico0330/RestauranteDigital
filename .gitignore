@@ -1,0 +1,28 @@
+# Build output (.NET)
+**/bin/
+**/obj/
+
+# Visual Studio / Rider / VS Code caches
+.vs/
+.idea/
+*.user
+*.suo
+
+# Test results
+TestResults/
+coverage.cobertura.xml
+*.coverage
+
+# Environment & secrets
+.env
+*.env.local
+appsettings.Local.json
+appsettings.Development.json
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

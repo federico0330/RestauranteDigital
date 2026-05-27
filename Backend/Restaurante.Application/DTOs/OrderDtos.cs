@@ -13,6 +13,7 @@ public class OrderItemRequest
 public class OrderRequest
 {
     public int DeliveryType { get; set; }
+    public int BranchId { get; set; }
     public string? DeliveryTo { get; set; }
     public string? Notes { get; set; }
     public List<OrderItemRequest> Items { get; set; } = new();
@@ -39,5 +40,7 @@ public class OrderResponse
     public decimal Price { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public int BranchId { get; set; }
+    public string? BranchName { get; set; }
     public List<OrderItemResponse> Items { get; set; } = new();
 }

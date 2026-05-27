@@ -22,6 +22,95 @@ namespace Restaurante.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Restaurante.Domain.Entities.Branch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("varchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Branch", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Address = "Av. Mitre 1200, Berazategui",
+                            CreateDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Casa Central",
+                            Phone = "+54 11 5000-1000"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Address = "9 de Julio 450, Bernal",
+                            CreateDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Sucursal Bernal",
+                            Phone = "+54 11 5000-2000"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Address = "Rivadavia 320, Quilmes",
+                            CreateDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Sucursal Quilmes Centro",
+                            Phone = "+54 11 5000-3000"
+                        });
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.BranchDishStock", b =>
+                {
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("DishId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MinStock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("UpdateDate")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("BranchId", "DishId");
+
+                    b.HasIndex("DishId");
+
+                    b.ToTable("BranchDishStock", (string)null);
+                });
+
             modelBuilder.Entity("Restaurante.Domain.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -172,6 +261,11 @@ namespace Restaurante.Infrastructure.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("varchar(MAX)");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("varchar(255)");
@@ -200,6 +294,11 @@ namespace Restaurante.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("OrderId"));
 
+                    b.Property<int>("BranchId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime");
 
@@ -222,6 +321,8 @@ namespace Restaurante.Infrastructure.Migrations
                         .HasColumnType("datetime");
 
                     b.HasKey("OrderId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("DeliveryTypeId");
 
@@ -311,6 +412,181 @@ namespace Restaurante.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Restaurante.Domain.Entities.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("varchar(25)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("User", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreateDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@restaurante.com",
+                            Name = "Administrador",
+                            PasswordHash = "$2a$11$Dlj/.AbWqsRq8KQS6LIcmO.IkmU.q4tu5OPxNw8sjBu24/EFCxOgi",
+                            Role = "Admin"
+                        });
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.WarrantyClaim", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OrderItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("Resolution")
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("varchar(25)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.ToTable("WarrantyClaim", (string)null);
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.WholesaleOrder", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("varchar(MAX)");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("varchar(25)");
+
+                    b.Property<string>("SupplierName")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<decimal>("TotalCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("WholesaleOrder", (string)null);
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.WholesaleOrderItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("DishId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("WholesaleOrderId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DishId");
+
+                    b.HasIndex("WholesaleOrderId");
+
+                    b.ToTable("WholesaleOrderItem", (string)null);
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.BranchDishStock", b =>
+                {
+                    b.HasOne("Restaurante.Domain.Entities.Branch", "Branch")
+                        .WithMany("Stocks")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Restaurante.Domain.Entities.Dish", "Dish")
+                        .WithMany()
+                        .HasForeignKey("DishId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Dish");
+                });
+
             modelBuilder.Entity("Restaurante.Domain.Entities.Dish", b =>
                 {
                     b.HasOne("Restaurante.Domain.Entities.Category", "Category")
@@ -324,6 +600,12 @@ namespace Restaurante.Infrastructure.Migrations
 
             modelBuilder.Entity("Restaurante.Domain.Entities.Order", b =>
                 {
+                    b.HasOne("Restaurante.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Restaurante.Domain.Entities.DeliveryType", "DeliveryType")
                         .WithMany()
                         .HasForeignKey("DeliveryTypeId")
@@ -335,6 +617,8 @@ namespace Restaurante.Infrastructure.Migrations
                         .HasForeignKey("OverallStatusId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("DeliveryType");
 
@@ -368,9 +652,68 @@ namespace Restaurante.Infrastructure.Migrations
                     b.Navigation("Status");
                 });
 
+            modelBuilder.Entity("Restaurante.Domain.Entities.WarrantyClaim", b =>
+                {
+                    b.HasOne("Restaurante.Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Restaurante.Domain.Entities.OrderItem", "OrderItem")
+                        .WithMany()
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("OrderItem");
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.WholesaleOrder", b =>
+                {
+                    b.HasOne("Restaurante.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.WholesaleOrderItem", b =>
+                {
+                    b.HasOne("Restaurante.Domain.Entities.Dish", "Dish")
+                        .WithMany()
+                        .HasForeignKey("DishId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Restaurante.Domain.Entities.WholesaleOrder", "WholesaleOrder")
+                        .WithMany("Items")
+                        .HasForeignKey("WholesaleOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dish");
+
+                    b.Navigation("WholesaleOrder");
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.Branch", b =>
+                {
+                    b.Navigation("Stocks");
+                });
+
             modelBuilder.Entity("Restaurante.Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("Restaurante.Domain.Entities.WholesaleOrder", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }
